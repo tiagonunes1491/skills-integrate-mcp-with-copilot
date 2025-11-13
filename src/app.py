@@ -19,57 +19,68 @@ current_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
 
-# In-memory activity database
+from typing import Optional
+
+# In-memory activity database with categories
 activities = {
     "Chess Club": {
+        "category": "Academic",
         "description": "Learn strategies and compete in chess tournaments",
         "schedule": "Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 12,
         "participants": ["michael@mergington.edu", "daniel@mergington.edu"]
     },
     "Programming Class": {
+        "category": "Academic",
         "description": "Learn programming fundamentals and build software projects",
         "schedule": "Tuesdays and Thursdays, 3:30 PM - 4:30 PM",
         "max_participants": 20,
         "participants": ["emma@mergington.edu", "sophia@mergington.edu"]
     },
     "Gym Class": {
+        "category": "Sports",
         "description": "Physical education and sports activities",
         "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
         "max_participants": 30,
         "participants": ["john@mergington.edu", "olivia@mergington.edu"]
     },
     "Soccer Team": {
+        "category": "Sports",
         "description": "Join the school soccer team and compete in matches",
         "schedule": "Tuesdays and Thursdays, 4:00 PM - 5:30 PM",
         "max_participants": 22,
         "participants": ["liam@mergington.edu", "noah@mergington.edu"]
     },
     "Basketball Team": {
+        "category": "Sports",
         "description": "Practice and play basketball with the school team",
         "schedule": "Wednesdays and Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
         "participants": ["ava@mergington.edu", "mia@mergington.edu"]
     },
     "Art Club": {
+        "category": "Arts",
         "description": "Explore your creativity through painting and drawing",
         "schedule": "Thursdays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
         "participants": ["amelia@mergington.edu", "harper@mergington.edu"]
     },
     "Drama Club": {
+        "category": "Arts",
         "description": "Act, direct, and produce plays and performances",
         "schedule": "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
         "max_participants": 20,
         "participants": ["ella@mergington.edu", "scarlett@mergington.edu"]
     },
     "Math Club": {
+        "category": "Academic",
         "description": "Solve challenging problems and participate in math competitions",
         "schedule": "Tuesdays, 3:30 PM - 4:30 PM",
         "max_participants": 10,
         "participants": ["james@mergington.edu", "benjamin@mergington.edu"]
     },
     "Debate Team": {
+        "category": "Academic",
         "description": "Develop public speaking and argumentation skills",
         "schedule": "Fridays, 4:00 PM - 5:30 PM",
         "max_participants": 12,
@@ -83,9 +94,35 @@ def root():
     return RedirectResponse(url="/static/index.html")
 
 
+# Enhanced activities endpoint with filtering, sorting, and search
 @app.get("/activities")
-def get_activities():
-    return activities
+def get_activities(
+    category: Optional[str] = None,
+    sort: Optional[str] = None,
+    search: Optional[str] = None
+):
+    filtered = []
+    for name, details in activities.items():
+        # Filter by category
+        if category and details.get("category", "").lower() != category.lower():
+            continue
+        # Filter by search
+        if search:
+            search_l = search.lower()
+            if search_l not in name.lower() and search_l not in details.get("description", "").lower():
+                continue
+        filtered.append((name, details))
+
+    # Sorting
+    if sort == "name":
+        filtered.sort(key=lambda x: x[0].lower())
+    elif sort == "category":
+        filtered.sort(key=lambda x: x[1].get("category", ""))
+    elif sort == "participants":
+        filtered.sort(key=lambda x: len(x[1].get("participants", [])), reverse=True)
+
+    # Return as dict
+    return {name: details for name, details in filtered}
 
 
 @app.post("/activities/{activity_name}/signup")
